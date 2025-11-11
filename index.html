@@ -4,10 +4,17 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rhythm Game</title>
+    <title>groovy</title>
   </head>
   <body>
     <div id="canvas-container"></div>
+
+    <!-- HUD - Updated directly by game.js for performance -->
+    <div id="hud" class="hud hidden">
+      <div id="score" class="score">Score: 0</div>
+      <div id="combo" class="combo"></div>
+    </div>
+
     <div id="ui-container"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

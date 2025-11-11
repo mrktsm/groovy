@@ -1,25 +1,11 @@
-import { useState, useEffect } from 'react';
-import { IoMusicalNotes } from 'react-icons/io5';
-import { AiOutlinePlus } from 'react-icons/ai';
-import './App.css';
+import { useState, useEffect } from "react";
+import { IoMusicalNotes } from "react-icons/io5";
+import { AiOutlinePlus } from "react-icons/ai";
+import "./App.css";
 
 function App({ gameState, onSongSelect, onGameStart }) {
   const [showMenu, setShowMenu] = useState(true);
   const [showStart, setShowStart] = useState(false);
-  const [score, setScore] = useState(0);
-  const [combo, setCombo] = useState(0);
-  const [started, setStarted] = useState(false);
-
-  // Update UI from game state
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setScore(gameState.score);
-      setCombo(gameState.combo);
-      setStarted(gameState.started);
-    }, 16); // ~60fps
-
-    return () => clearInterval(interval);
-  }, [gameState]);
 
   const handleSongSelect = (song) => {
     setShowMenu(false);
@@ -35,28 +21,18 @@ function App({ gameState, onSongSelect, onGameStart }) {
   // Listen for Space key to start
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.code === 'Space' && showStart && !started) {
+      if (e.code === "Space" && showStart && !gameState.started) {
         e.preventDefault();
         handleStartGame();
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showStart, started]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showStart, gameState.started]);
 
   return (
     <>
-      {/* HUD - Always visible during gameplay */}
-      {started && (
-        <div className="hud">
-          <div className="score">Score: {score}</div>
-          <div className="combo">
-            {combo > 0 && `${combo}x Combo!`}
-          </div>
-        </div>
-      )}
-
       {/* Song Selection Menu */}
       {showMenu && (
         <div className="song-menu">
@@ -65,7 +41,7 @@ function App({ gameState, onSongSelect, onGameStart }) {
             <div className="song-grid">
               <button
                 className="song-button"
-                onClick={() => handleSongSelect('easy')}
+                onClick={() => handleSongSelect("easy")}
               >
                 <IoMusicalNotes className="icon" />
                 <div className="artist">Easy Beat</div>
@@ -73,7 +49,7 @@ function App({ gameState, onSongSelect, onGameStart }) {
 
               <button
                 className="song-button"
-                onClick={() => handleSongSelect('medium')}
+                onClick={() => handleSongSelect("medium")}
               >
                 <IoMusicalNotes className="icon" />
                 <div className="artist">Medium Groove</div>
@@ -81,7 +57,7 @@ function App({ gameState, onSongSelect, onGameStart }) {
 
               <button
                 className="song-button"
-                onClick={() => handleSongSelect('hard')}
+                onClick={() => handleSongSelect("hard")}
               >
                 <IoMusicalNotes className="icon" />
                 <div className="artist">Hard Rush</div>
@@ -89,7 +65,7 @@ function App({ gameState, onSongSelect, onGameStart }) {
 
               <button
                 className="song-button"
-                onClick={() => handleSongSelect('custom')}
+                onClick={() => handleSongSelect("custom")}
               >
                 <AiOutlinePlus className="icon" />
                 <div className="artist">Custom Song</div>
@@ -100,7 +76,7 @@ function App({ gameState, onSongSelect, onGameStart }) {
       )}
 
       {/* Start Screen */}
-      {showStart && !started && (
+      {showStart && !gameState.started && (
         <div className="start-screen">
           <h1>Rhythm Game</h1>
           <p>Press D, F, J, K when notes reach the bottom</p>
@@ -112,4 +88,3 @@ function App({ gameState, onSongSelect, onGameStart }) {
 }
 
 export default App;
-
