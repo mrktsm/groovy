@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 // Game state
-const gameState = {
+export const gameState = {
   score: 0,
   combo: 0,
   started: false,
@@ -16,34 +16,58 @@ const gameState = {
   lastSpawnTime: 0,
   spawnInterval: 800, // ms between spawns
   keyMeshes: {}, // Store 3D key objects
+  selectedSong: null,
+  songDifficulties: {
+    easy: { spawnInterval: 1200 },
+    medium: { spawnInterval: 800 },
+    hard: { spawnInterval: 500 },
+    custom: { spawnInterval: 800 },
+  },
 };
 
 // Three.js setup
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0a1a);
-scene.fog = new THREE.Fog(0x0a0a1a, 10, 50);
+let scene, camera, renderer;
 
-const camera = new THREE.PerspectiveCamera(
-  60,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
-camera.position.set(0, 4, 6);
-camera.lookAt(0, 0, -10);
+export function initGame() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a1a);
+  scene.fog = new THREE.Fog(0x0a0a1a, 10, 50);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-document.getElementById("canvas-container").appendChild(renderer.domElement);
+  camera = new THREE.PerspectiveCamera(
+    60,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  );
+  camera.position.set(0, 4, 6);
+  camera.lookAt(0, 0, -10);
 
-// Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-scene.add(ambientLight);
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  document.getElementById("canvas-container").appendChild(renderer.domElement);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-directionalLight.position.set(5, 10, 5);
-scene.add(directionalLight);
+  // Lighting
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  directionalLight.position.set(5, 10, 5);
+  scene.add(directionalLight);
+
+  // Initialize game
+  createLanes();
+  create3DKeys();
+  setupInput();
+  animate(0);
+
+  // Handle window resize
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+}
 
 // Create lanes (visual guides)
 function createLanes() {
@@ -263,7 +287,6 @@ function updateNotes() {
       scene.remove(note.mesh);
       gameState.notes.splice(i, 1);
       gameState.combo = 0;
-      updateUI();
     }
   }
 }
@@ -306,12 +329,9 @@ function checkHit(key) {
 
     // Visual feedback
     createHitEffect(lane.position, lane.color);
-
-    updateUI();
   } else {
     // Miss
     gameState.combo = 0;
-    updateUI();
   }
 }
 
@@ -345,72 +365,42 @@ function createHitEffect(x, color) {
   animate();
 }
 
-// Update UI
-function updateUI() {
-  document.getElementById("score").textContent = `Score: ${gameState.score}`;
-  document.getElementById("combo").textContent = `Combo: ${gameState.combo}`;
-}
-
 // Input handling
-document.addEventListener("keydown", (e) => {
-  const key = e.key.toLowerCase();
+function setupInput() {
+  document.addEventListener("keydown", (e) => {
+    const key = e.key.toLowerCase();
 
-  if (key === " " && !gameState.started) {
-    gameState.started = true;
-    document.getElementById("start-screen").classList.add("hidden");
-    gameState.lastSpawnTime = performance.now();
-    return;
-  }
+    if (!gameState.started) return;
 
-  if (!gameState.started) return;
+    if (!gameState.pressedKeys.has(key)) {
+      gameState.pressedKeys.add(key);
 
-  if (!gameState.pressedKeys.has(key)) {
-    gameState.pressedKeys.add(key);
+      // Visual feedback on 3D key - compress it down
+      const keyObj = gameState.keyMeshes[key];
+      if (keyObj) {
+        keyObj.mesh.position.y = keyObj.pressedY;
+        keyObj.mesh.scale.y = keyObj.pressedScaleY;
+        keyObj.mesh.material.color.setHex(0x2a2a2a);
+      }
 
-    // Visual feedback on HTML key
-    const keyElement = document.getElementById(`key-${key}`);
-    if (keyElement) {
-      keyElement.classList.add("active");
+      // Check for hit
+      checkHit(key);
     }
+  });
 
-    // Visual feedback on 3D key - compress it down
+  document.addEventListener("keyup", (e) => {
+    const key = e.key.toLowerCase();
+    gameState.pressedKeys.delete(key);
+
+    // Reset 3D key visual - restore height
     const keyObj = gameState.keyMeshes[key];
     if (keyObj) {
-      keyObj.mesh.position.y = keyObj.pressedY;
-      keyObj.mesh.scale.y = keyObj.pressedScaleY;
-      keyObj.mesh.material.color.setHex(0x2a2a2a);
+      keyObj.mesh.position.y = keyObj.originalY;
+      keyObj.mesh.scale.y = keyObj.originalScaleY;
+      keyObj.mesh.material.color.setHex(0x333333);
     }
-
-    // Check for hit
-    checkHit(key);
-  }
-});
-
-document.addEventListener("keyup", (e) => {
-  const key = e.key.toLowerCase();
-  gameState.pressedKeys.delete(key);
-
-  // Reset HTML key visual
-  const keyElement = document.getElementById(`key-${key}`);
-  if (keyElement) {
-    keyElement.classList.remove("active");
-  }
-
-  // Reset 3D key visual - restore height
-  const keyObj = gameState.keyMeshes[key];
-  if (keyObj) {
-    keyObj.mesh.position.y = keyObj.originalY;
-    keyObj.mesh.scale.y = keyObj.originalScaleY;
-    keyObj.mesh.material.color.setHex(0x333333);
-  }
-});
-
-// Handle window resize
-window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+  });
+}
 
 // Animation loop
 function animate(timestamp) {
@@ -424,7 +414,14 @@ function animate(timestamp) {
   renderer.render(scene, camera);
 }
 
-// Initialize
-createLanes();
-create3DKeys();
-animate(0);
+// Export functions for React to use
+export function selectSong(song) {
+  gameState.selectedSong = song;
+  gameState.spawnInterval = gameState.songDifficulties[song].spawnInterval;
+}
+
+export function startGame() {
+  gameState.started = true;
+  gameState.lastSpawnTime = performance.now();
+}
+
